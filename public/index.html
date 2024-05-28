@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="Bianca Salcedo" />
+  <meta name="description" content="Club Deportivo" />
+  <link rel="stylesheet" href="public/css/style.css" />
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"
+    integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN"
+    crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"
+    integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV"
+    crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.20.0/axios.min.js"></script>
+  <title>Club Deportivo</title>
+</head>
+
+<body>
+
+  <div class="container w-50 ">
+    <h1 class="title mt-3" style="text-align: center; font-weight: bold;">Club Deportivo</h1>
+    <div action="/agregar" class="border border-info  rounded p-4">
+      <div class="form-group row ">
+        <label class="col-sm-2 col-form-label">Nombre</label>
+        <div class="col-sm-10 ">
+          <input id="nombre" type="text" class="form-control border border-info" name="nombre" placeholder="Ingresa el nombre del Deporte en letras" />
+        </div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Precio en $</label>
+        <div class="col-sm-10">
+          <input id="precio" type="number" class="form-control border border-info" placeholder="Ingresa el precio mayor a 1"
+            precio="precio" min="1" onkeypress="return isNumber(event)" />
+        </div>
+      </div>
+      <button class="btn btn-success" onclick="agregar()">Agregar</button>
+    </div>
+  </div>
+
+  <h2 class="text-center my-5 text-danger">Tabla de deportes registrados</h2>
+  <table class="table w-50 m-auto border ">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Nombre del Deporte</th>
+        <th scope="col">Precio en dolares $</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody id="cuerpo"></tbody>
+  </table>
+
+  <script>
+    $(document).ready(function () {
+      getData()
+    })
+
+    function getData() {
+      $('#cuerpo').html('')
+      axios.get('/deportes').then((data) => {
+        let deportes = data.data.deportes
+        deportes.forEach((d, i) => {
+          $('#cuerpo').append(`
+            <tr>
+              <th scope="row">${i + 1}</th>
+              <td>${d.nombre}</td>
+              <td>${d.precio}</td>
+              <td>
+                <button class="btn btn-warning" onclick='preEdit("${d.nombre}","${d.precio
+            }")' data-toggle="modal" data-target="#exampleModal">Editar</button>
+                <button class="btn btn-danger" onclick='eliminar("${d.nombre}")'>Eliminar</button>
+              </td>
+            </tr>
+            `)
+        })
+      })
+    }
+
+
+    function preEdit(nombre, precio) {
+      $('#nombreModal').val(nombre)
+      $('#precioModal').val(precio)
+    }
+
+    function agregar() {
+      let nombre = $('#nombre').val().toUpperCase(); // Convertir a mayúsculas
+      let precio = parseFloat($('#precio').val()); // Convertir a número
+      // Validar que el nombre solo contenga letras
+      let nombreValido = /^[A-Za-z]+$/.test(nombre);
+      // Verificar que tanto nombre como precio no estén vacíos y que el nombre solo contenga letras
+      if (nombre.trim() !== '' && nombreValido && !isNaN(precio) && precio > 1) {
+        axios.get(`/agregar?nombre=${nombre}&precio=${precio}`).then((data) => {
+          alert(data.data)
+          getData()
+          // Restablecer los valores del formulario
+          $('#nombre').val('');
+          $('#precio').val('');
+          $('#exampleModal').modal('hide');
+        })
+      } else if (!nombreValido) {
+        alert('Por favor, ingresa solo letras en el campo de nombre.')
+      } else {
+        alert('Por favor, asegúrate de completar todos los campos correctamente.')
+      }
+    }
+
+
+    function edit() {
+      let nombre = $('#nombreModal').val();
+      let precio = $('#precioModal').val();
+      axios.put(`/editar?nombre=${nombre}&precio=${precio}`).then((data) => {
+        alert(data.data);
+        getData();
+      }).catch(error => {
+        console.error('Error al editar:', error);
+        alert('Hubo un error al editar el deporte');
+      });
+      $('#exampleModal').modal('hide');
+    }
+
+
+    function eliminar(nombre) {
+      axios.get(`/eliminar?nombre=${nombre}`).then((data) => {
+        alert(data.data)
+        getData()
+      })
+      $('#exampleModal').modal('hide')
+    }
+
+    // Función para validar que solo se ingresen números en el campo de precio
+    function isNumber(event) {
+      return /\d/.test(String.fromCharCode(event.keyCode));
+    }
+  </script>
+
+<!-- Modal para editar -->
+  <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="rounded p-4">
+          <form>
+            <div class="form-group row">
+              <label class="col-sm-2 col-form-label">Nombre</label>
+              <div class="col-sm-10">
+                <input id="nombreModal" disabled type="text" class="form-control" name="nombre" />
+              </div>
+            </div>
+            <div class="form-group row">
+              <label class="col-sm-2 col-form-label">Precio</label>
+              <div class="col-sm-10">
+                <input id="precioModal" type="number" class="form-control" precio="precio" min="1" />
+              </div>
+            </div>
+          </form>
+          <button class="btn btn-success butonguardar" onclick="edit()">Salvar cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
